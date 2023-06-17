@@ -11,7 +11,7 @@ namespace Rollermine;
 
 /*[Spawnable]*/
 [Library("npc_rollermine")]
-public partial class Rollermine : BasePhysics
+public partial class Rollermine : AnimatedEntity
 {
     private Entity? _target;
     public TimeSince LastTargetUpdate { private set; get; }
@@ -30,10 +30,11 @@ public partial class Rollermine : BasePhysics
 
     public override void Spawn()
     {
-        Log.Info("Spawning Melon");
         base.Spawn();
-        Model = Cloud.Model("garry.beachball");
-        /*SetModel("models/sbox_props/watermelon/watermelon.vmdl");*/
+        SetModel("models/rollermine.vmdl");
+
+        PhysicsEnabled = true;
+        UsePhysicsCollision = true;
     }
 
     [GameEvent.Tick.Server]
@@ -43,7 +44,7 @@ public partial class Rollermine : BasePhysics
 
         if (Target == null) return;
 
-        PhysicsBody.ApplyForce((Target.Position - this.Position).Normal * 80000);
+        PhysicsBody.ApplyForce((Target.Position - this.Position).Normal * 400000);
     }
 
     private void UpdateTarget()
