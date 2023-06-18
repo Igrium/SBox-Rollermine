@@ -169,7 +169,7 @@
 		]
 		model_archetype = ""
 		primary_associated_entity = "prop_physics"
-		anim_graph_name = ""
+		anim_graph_name = "animgraphs/rollermine.vanmgrph"
 		base_model_name = ""
 	}
 }

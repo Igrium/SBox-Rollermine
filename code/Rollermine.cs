@@ -16,6 +16,15 @@ public partial class Rollermine : AnimatedEntity
     private Entity? _target;
     public TimeSince LastTargetUpdate { private set; get; }
 
+    public static readonly float BASE_FORCE = 4000;
+    public static readonly float ADJUSTMENT_FACTOR = .3f;
+
+    public bool SpikesOpen
+    {
+        get => GetAnimParameterBool("b_open");
+        set => SetAnimParameter("b_open", value);
+    }
+
     public Entity? Target
     {
         get { return _target; }
@@ -44,7 +53,28 @@ public partial class Rollermine : AnimatedEntity
 
         if (Target == null) return;
 
-        PhysicsBody.ApplyForce((Target.Position - this.Position).Normal * 400000);
+        Vector3 targetPos = Target.Position.WithZ(this.Position.z);
+        /*Rotation targetRot = new Rotation((targetPos - this.Position).Normal, 180);*/
+
+        Vector3 normal = (targetPos - this.Position).Normal;
+        var axis = normal.RotateAround(new Vector3(0, 0, 0), Rotation.FromYaw(90));
+
+        Vector3 currentDirection = PhysicsBody.Velocity.Normal;
+
+        // A value from 1 - 0 denoting the deviation from the desired direction of the ball's velocity
+        // We increase the max torque depending on how much change is needed.
+        float factor = MapRange(-1, 1, 0, 1, currentDirection.Dot(normal));
+        factor *= PhysicsBody.Velocity.Length;
+
+        factor = MapRange(0, 32, BASE_FORCE, BASE_FORCE * ADJUSTMENT_FACTOR, factor);
+        factor = float.Clamp(factor, BASE_FORCE * ADJUSTMENT_FACTOR, BASE_FORCE);
+        /*factor = factor.Clamp(BASE_FORCE / 2, BASE_FORCE);*/
+
+        float torque = BASE_FORCE * factor;
+
+        PhysicsBody.ApplyTorque(axis * torque);
+
+        SpikesOpen = this.Position.Distance(Target.Position) < 192;
     }
 
     private void UpdateTarget()
@@ -73,4 +103,5 @@ public partial class Rollermine : AnimatedEntity
 
     protected virtual bool ShouldUpdateTarget => LastTargetUpdate > TargetInterval || Target?.LifeState != LifeState.Alive;
 
+    private float MapRange(float min1, float max1, float min2, float max2, float value) => (value - min1) * (max2 - min2) / (max1 - min1) + min2;
 }
