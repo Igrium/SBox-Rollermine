@@ -16,7 +16,7 @@ public partial class Rollermine : AnimatedEntity
     private Entity? _target;
     public TimeSince LastTargetUpdate { private set; get; }
 
-    public static readonly float BASE_FORCE = 4000;
+    public static readonly float BASE_FORCE = 10000000;
     public static readonly float ADJUSTMENT_FACTOR = .3f;
 
     public bool SpikesOpen
@@ -63,12 +63,10 @@ public partial class Rollermine : AnimatedEntity
 
         // A value from 1 - 0 denoting the deviation from the desired direction of the ball's velocity
         // We increase the max torque depending on how much change is needed.
-        float factor = MapRange(-1, 1, 0, 1, currentDirection.Dot(normal));
-        factor *= PhysicsBody.Velocity.Length;
-
-        factor = MapRange(0, 32, BASE_FORCE, BASE_FORCE * ADJUSTMENT_FACTOR, factor);
-        factor = float.Clamp(factor, BASE_FORCE * ADJUSTMENT_FACTOR, BASE_FORCE);
-        /*factor = factor.Clamp(BASE_FORCE / 2, BASE_FORCE);*/
+        float dot = PhysicsBody.Velocity.Dot(normal);
+        /*Log.Info(dot);*/
+        float factor = MapRange(-300, 380, -4, 2, dot).Clamp(-1.4f, -0) * -1;
+        Log.Info(factor);
 
         float torque = BASE_FORCE * factor;
 
