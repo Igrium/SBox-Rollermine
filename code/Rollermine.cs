@@ -19,6 +19,13 @@ public partial class Rollermine : AnimatedEntity
     public static readonly float BASE_FORCE = 10000000;
     public static readonly float ADJUSTMENT_FACTOR = .3f;
 
+    public static readonly float MAX_TORQUE_FACTOR = 5;
+
+    private float ForwardSpeed = -1200000;
+
+    // When it was last charged
+    private float ChargeTime = Time.Now;
+
     public bool SpikesOpen
     {
         get => GetAnimParameterBool("b_open");
@@ -45,9 +52,7 @@ public partial class Rollermine : AnimatedEntity
         PhysicsEnabled = true;
         UsePhysicsCollision = true;
     }
-
-    [GameEvent.Tick.Server]
-    public virtual void ComputeAI()
+    public virtual void ComputeAIOld()
     {
         if (ShouldUpdateTarget) UpdateTarget();
 
@@ -65,7 +70,7 @@ public partial class Rollermine : AnimatedEntity
         // We increase the max torque depending on how much change is needed.
         float dot = PhysicsBody.Velocity.Dot(normal);
         /*Log.Info(dot);*/
-        float factor = MapRange(-300, 380, -4, 2, dot).Clamp(-1.4f, -0) * -1;
+        float factor = MapRange(-300, 380, -4, 2, dot).Clamp(-1.2f, -0) * -1;
         Log.Info(factor);
 
         float torque = BASE_FORCE * factor;
@@ -73,6 +78,48 @@ public partial class Rollermine : AnimatedEntity
         PhysicsBody.ApplyTorque(axis * torque);
 
         SpikesOpen = this.Position.Distance(Target.Position) < 192;
+    }
+
+    [GameEvent.Tick.Server]
+    public virtual void ComputeAI()
+    {
+        if (ShouldUpdateTarget) UpdateTarget();
+        if (Target == null) return;
+
+        Vector3 targetPosition = Target.Position;
+
+        Vector3 vecToTarget = targetPosition - this.Position;
+
+        float yaw = Util.VecToYaw(vecToTarget);
+        var vecRight = vecToTarget.Normal.RotateAround(new Vector3(0, 0, 0), Rotation.FromYaw(90));
+
+        Vector3 vecVelocity = PhysicsBody.Velocity.Normal;
+        vecToTarget = vecToTarget.Normal;
+
+        var flDot = vecVelocity.Dot(vecToTarget);
+        var flTorqueFactor = 1 + (Time.Now - ChargeTime) * 2;
+        flTorqueFactor = 1 * 2;
+
+        if ( flTorqueFactor < 1 )
+        {
+            flTorqueFactor = 1;
+        }
+        else if ( flTorqueFactor > MAX_TORQUE_FACTOR )
+        {
+            flTorqueFactor = MAX_TORQUE_FACTOR;
+        }
+
+        Vector3 vecCompensate = new Vector3
+        (
+            vecVelocity.y,
+            -vecVelocity.x,
+            0
+        ).Normal;
+
+        Log.Info(vecCompensate);
+
+        PhysicsBody.ApplyTorque((vecRight + vecCompensate) * ForwardSpeed * flTorqueFactor);
+        
     }
 
     private void UpdateTarget()
