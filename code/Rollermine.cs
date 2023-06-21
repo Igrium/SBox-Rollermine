@@ -32,6 +32,9 @@ public partial class Rollermine : AnimatedEntity
     [Property(Title = "Correction Force")]
     public float CorrectionForce { get; set; } = 20000;
 
+    [Property(Title = "Max Range")]
+    public float MaxRange { get; set; } = 1024;
+
 
     public static readonly float MAX_TORQUE_FACTOR = 5;
 
@@ -53,6 +56,12 @@ public partial class Rollermine : AnimatedEntity
 
     public float TargetInterval { get; set; } = 5;
 
+    public static readonly float PATH_UPDATE_INTERVAL = .5f;
+    public static readonly int PATH_ERROR_ALLOWANCE = 64;
+    protected TimeSince TimeSinceGeneratedPath = 0;
+    protected int CurrentPathSegment;
+    protected Vector3[]? Path;
+
     public override void Spawn()
     {
         base.Spawn();
@@ -66,9 +75,13 @@ public partial class Rollermine : AnimatedEntity
     {
         if (ShouldUpdateTarget) UpdateTarget();
 
-        if (Target == null) return;
+        if (Target == null)
+        {
+            Path = null;
+            return;
+        };
 
-        MoveTowards(Target.Position);
+        TickMovement(Target);
 
         SpikesOpen = this.Position.Distance(Target.Position) < 128;
 
@@ -76,7 +89,50 @@ public partial class Rollermine : AnimatedEntity
 
     public void TickMovement(Entity target)
     {
+        if (Path == null || TimeSinceGeneratedPath >= PATH_UPDATE_INTERVAL)
+        {
+            GeneratePath(target);
+        }
 
+        if (Path == null)
+        {
+            throw new InvalidOperationException("GeneratePath created null path");
+        }
+
+        if (Path.Length <= 0) return;
+
+        var targetLocation = Path[CurrentPathSegment];
+
+        if (Position.Distance(targetLocation) >= PATH_ERROR_ALLOWANCE)
+        {
+            CurrentPathSegment++;
+            if (CurrentPathSegment >= Path.Length)
+            {
+                targetLocation = target.Position;
+            } else
+            {
+                targetLocation = Path[CurrentPathSegment];
+            }
+        }
+
+        MoveTowards(targetLocation);
+    }
+
+    protected void GeneratePath(Entity target)
+    {
+
+        Path = NavMesh.PathBuilder(Position)
+            .WithMaxClimbDistance(4)
+            .WithStepHeight(4)
+            .WithMaxDistance(MaxRange * 2)
+            .WithPartialPaths()
+            .Build(target.Position)
+            .Segments
+            .Select(x => x.Position)
+            .ToArray();
+
+        CurrentPathSegment = 0;
+        TimeSinceGeneratedPath = 0;
     }
 
     /// <summary>
