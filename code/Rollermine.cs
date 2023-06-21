@@ -1,5 +1,6 @@
 ﻿#nullable enable
 
+using Editor;
 using Sandbox;
 using System;
 using System.Collections.Generic;
@@ -9,22 +10,30 @@ using System.Threading.Tasks;
 
 namespace Rollermine;
 
-/*[Spawnable]*/
-[Library("npc_rollermine")]
+[Spawnable]
+[HammerEntity]
+[Library("npc_rollermine", Title = "Rollermine", Group = "NPC")]
 public partial class Rollermine : AnimatedEntity
 {
     private Entity? _target;
     public TimeSince LastTargetUpdate { private set; get; }
 
-    public static readonly float BASE_FORCE = 9000000;
-    public static readonly float CORRECTION_FORCE = 20000;
+    /// <summary>
+    /// The base amount of torque to apply when moving the rollermine.
+    /// </summary>
+    [Property(Title = "Base Force")]
+    public float BaseForce { get; set; } = 9000000;
+
+    /// <summary>
+    /// The amount of torque to use while correcting for horizontal velocity.
+    /// Lower values may cause the rollermine to orbit its target, and higher
+    /// values will make it beeline directly at it.
+    /// </summary>
+    [Property(Title = "Correction Force")]
+    public float CorrectionForce { get; set; } = 20000;
+
 
     public static readonly float MAX_TORQUE_FACTOR = 5;
-
-    private float ForwardSpeed = -1200000;
-
-    // When it was last charged
-    private float ChargeTime = Time.Now;
 
     public bool SpikesOpen
     {
@@ -53,33 +62,37 @@ public partial class Rollermine : AnimatedEntity
         UsePhysicsCollision = true;
     }
     [GameEvent.Tick.Server]
-    public virtual void ComputeAI()
+    public virtual void TickAI()
     {
         if (ShouldUpdateTarget) UpdateTarget();
 
         if (Target == null) return;
 
-        Vector3 targetPos = Target.Position.WithZ(this.Position.z);
-        /*Rotation targetRot = new Rotation((targetPos - this.Position).Normal, 180);*/
+        MoveTowards(Target.Position);
+
+        SpikesOpen = this.Position.Distance(Target.Position) < 128;
+
+    }
+
+    public void TickMovement(Entity target)
+    {
+
+    }
+
+    /// <summary>
+    /// Move the rollermine towards a specific position, usually the attack target.
+    /// </summary>
+    /// <param name="targetPos">The target position.</param>
+    public void MoveTowards(Vector3 targetPos)
+    {
+        targetPos = targetPos.WithZ(this.Position.z);
 
         Vector3 normal = (targetPos - this.Position).Normal;
         Vector2 normal2D = new Vector2(normal.x, normal.y);
 
-        //Log.Info(correctionMagnitude);
-
-        //Log.Info(currentVelocityLocal.y);
-
         var axis = normal.RotateAround(new Vector3(0, 0, 0), Rotation.FromYaw(90));
 
-        Vector3 currentDirection = PhysicsBody.Velocity.Normal;
-
-        // A value from 1 - 0 denoting the deviation from the desired direction of the ball's velocity
-        // We increase the max torque depending on how much change is needed.
-        float dot = PhysicsBody.Velocity.Dot(normal);
-
-        float factor = MapRange(-300, 380, -4, 2, dot).Clamp(-1.2f, -0) * -1;
-        //float torque = BASE_FORCE * factor;
-        float torque = BASE_FORCE * .6f;
+        float torque = BaseForce * .6f;
 
         PhysicsBody.ApplyTorque(axis * torque);
 
@@ -88,55 +101,9 @@ public partial class Rollermine : AnimatedEntity
         float angle = MeasureAngle(velocity2D, normal2D);
 
         float correctionMagnitude = velocity2D.Length * MathF.Sin(angle);
+        PhysicsBody.ApplyTorque(normal * correctionMagnitude * CorrectionForce);
 
-        PhysicsBody.ApplyTorque(normal * correctionMagnitude * CORRECTION_FORCE);
-
-
-
-        SpikesOpen = this.Position.Distance(Target.Position) < 128;
     }
-
-    ////[GameEvent.Tick.Server]
-    //public virtual void ComputeAI()
-    //{
-    //    if (ShouldUpdateTarget) UpdateTarget();
-    //    if (Target == null) return;
-
-    //    Vector3 targetPosition = Target.Position;
-
-    //    Vector3 vecToTarget = targetPosition - this.Position;
-
-    //    float yaw = Util.VecToYaw(vecToTarget);
-    //    var vecRight = vecToTarget.Normal.RotateAround(new Vector3(0, 0, 0), Rotation.FromYaw(90));
-
-    //    Vector3 vecVelocity = PhysicsBody.Velocity.Normal;
-    //    vecToTarget = vecToTarget.Normal;
-
-    //    var flDot = vecVelocity.Dot(vecToTarget);
-    //    var flTorqueFactor = 1 + (Time.Now - ChargeTime) * 2;
-    //    flTorqueFactor = 1 * 2;
-
-    //    if ( flTorqueFactor < 1 )
-    //    {
-    //        flTorqueFactor = 1;
-    //    }
-    //    else if ( flTorqueFactor > MAX_TORQUE_FACTOR )
-    //    {
-    //        flTorqueFactor = MAX_TORQUE_FACTOR;
-    //    }
-
-    //    Vector3 vecCompensate = new Vector3
-    //    (
-    //        vecVelocity.y,
-    //        -vecVelocity.x,
-    //        0
-    //    ).Normal;
-
-    //    Log.Info(vecCompensate);
-
-    //    PhysicsBody.ApplyTorque((vecRight + vecCompensate) * ForwardSpeed * flTorqueFactor);
-        
-    //}
 
     private void UpdateTarget()
     {
@@ -164,21 +131,12 @@ public partial class Rollermine : AnimatedEntity
 
     protected virtual bool ShouldUpdateTarget => LastTargetUpdate > TargetInterval || Target?.LifeState != LifeState.Alive;
 
-    private float MapRange(float min1, float max1, float min2, float max2, float value) => (value - min1) * (max2 - min2) / (max1 - min1) + min2;
-    
     /// <summary>
-    /// Rotate a 2D vector around the origin
+    /// Return the angle created by two vectors, given they start at the same point.
     /// </summary>
-    /// <param name="src">Source vector</param>
-    /// <param name="angle">Amount to rotate it, in radians</param>
-    /// <returns>Rotated vector</returns>
-    private Vector2 Rotate2D(Vector2 src, float angle)
-    {
-        float x2 = src.x * MathF.Cos(angle) - src.y * MathF.Sin(angle);
-        float y2 = src.y * MathF.Cos(angle) + src.x * MathF.Sin(angle);
-        return new Vector2(x2, y2);
-    }
-
+    /// <param name="a"></param>
+    /// <param name="b"></param>
+    /// <returns></returns>
     private float MeasureAngle(Vector2 a, Vector2 b)
     {
         float angleA = MathF.Atan2(a.y, a.x);
