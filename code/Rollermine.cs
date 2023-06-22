@@ -22,7 +22,7 @@ public partial class Rollermine : AnimatedEntity
     /// The base amount of torque to apply when moving the rollermine.
     /// </summary>
     [Property(Title = "Base Force")]
-    public float BaseForce { get; set; } = 10000000;
+    public float BaseForce { get; set; } = 15000000;
 
     /// <summary>
     /// The amount of torque to use while correcting for horizontal velocity.
@@ -30,7 +30,7 @@ public partial class Rollermine : AnimatedEntity
     /// values will make it beeline directly at it.
     /// </summary>
     [Property(Title = "Correction Force")]
-    public float CorrectionForce { get; set; } = 20000;
+    public float CorrectionForce { get; set; } = 30000;
 
     [Property(Title = "Max Range")]
     public float MaxRange { get; set; } = 1024;
@@ -249,15 +249,26 @@ public partial class Rollermine : AnimatedEntity
     protected override void OnPhysicsCollision(CollisionEventData eventData)
     {
         base.OnPhysicsCollision(eventData);
+        ApplyCollisionDamage(eventData);
         if (IsStunned) return;
 
         var ent = eventData.Other.Entity;
-        if (!CanTarget(ent)) return;
 
-        ent.TakeDamage(DamageInfo.Generic(DamageAmount).WithAttacker(this));
+        if (CanTarget(ent))
+        {
+            ent.TakeDamage(DamageInfo.Generic(DamageAmount).WithAttacker(this));
 
-        Vector3 knockback = eventData.Normal.WithZ(1) * SelfKnockbackForce;
-        PhysicsBody.ApplyImpulse(knockback);
-        Stun(AttackStunDuration);
+            Vector3 knockback = eventData.Normal.WithZ(1) * SelfKnockbackForce;
+            PhysicsBody.ApplyImpulse(knockback);
+            Stun(AttackStunDuration);
+        } else
+        {
+            // Still do damage to physics props.
+            if (SpikesOpen && ent is ModelEntity prop && prop.PhysicsEnabled)
+            {
+                prop.TakeDamage(DamageInfo.Generic(DamageAmount).WithAttacker(this));
+            }
+        }
+
     }
 }
