@@ -35,8 +35,21 @@ public partial class Rollermine : AnimatedEntity
     [Property(Title = "Max Range")]
     public float MaxRange { get; set; } = 1024;
 
+    /// <summary>
+    /// The amount of damage to inflict on targets.
+    /// </summary>
+    [Property(Title = "Damage Amount")]
+    public float DamageAmount { get; set; } = 10;
 
     public static readonly float MAX_TORQUE_FACTOR = 5;
+
+    public float SelfKnockbackForce { get; set; } = 80000;
+
+    /// <summary>
+    /// The amount of time to stun ourselves after an attack.
+    /// </summary>
+    [Property(Title = "Attack Stun Duration")]
+    public float AttackStunDuration { get; set; } = 3;
 
     public bool SpikesOpen
     {
@@ -70,9 +83,42 @@ public partial class Rollermine : AnimatedEntity
         PhysicsEnabled = true;
         UsePhysicsCollision = true;
     }
+
+    /// <summary>
+    /// The time at which the rollermine will be revived if stunned.
+    /// </summary>
+    protected float ReviveTime;
+
+    public bool IsStunned { get => Time.Now <= ReviveTime; private set { } }
+
+    /// <summary>
+    /// Stun this rollermine
+    /// </summary>
+    /// <param name="time">The amount of time to stun for, in seconds.</param>
+    [Input]
+    public void Stun(float time)
+    {
+        ReviveTime = Time.Now + time;
+    }
+
+    /// <summary>
+    /// Force revive this rollermine
+    /// </summary>
+    [Input]
+    public void Revive()
+    {
+        ReviveTime = 0;
+    }
+
     [GameEvent.Tick.Server]
     public virtual void TickAI()
     {
+        if (IsStunned)
+        {
+            SpikesOpen = false;
+            return;
+        }
+
         if (ShouldUpdateTarget) UpdateTarget();
 
         if (Target == null)
@@ -112,25 +158,6 @@ public partial class Rollermine : AnimatedEntity
                 CurrentPathSegment++;
             }
         }
-
-
-        //var targetSegment = Path.Segments[CurrentPathSegment];
-
-        //if (Position.Distance(targetSegment.Position) <= PATH_ERROR_ALLOWANCE)
-        //{
-        //    CurrentPathSegment++;
-        //}
-
-        //Vector3 targetLocation;
-
-        //if (CurrentPathSegment >= Path.Count)
-        //{
-        //    targetLocation = target.Position;
-        //}
-        //else
-        //{
-        //    targetLocation = Path.Segments[CurrentPathSegment].Position;
-        //}
 
         MoveTowards(targetLocation);
     }
@@ -179,7 +206,7 @@ public partial class Rollermine : AnimatedEntity
         Log.Trace("Updating rollermine target");
 
         Entity? closest = null;
-        foreach (var ent in Game.Clients.Where(c => c.Pawn is Entity).Select(c => c.Pawn as Entity))
+        foreach (var ent in Entity.All.Where(CanTarget))
         {
             if (ent == null) continue;
             if (closest == null)
@@ -188,17 +215,23 @@ public partial class Rollermine : AnimatedEntity
                 continue;
             }
 
-            if (ent.LifeState == LifeState.Alive && ent.Position.DistanceSquared(this.Position) < closest.Position.DistanceSquared(this.Position))
+            if (ent.Position.Distance(this.Position) < closest.Position.Distance(this.Position))
             {
                 closest = ent;
             }
-
         }
+
+        Target = closest;
 
         Target = closest;
     }
 
-    protected virtual bool ShouldUpdateTarget => LastTargetUpdate > TargetInterval || Target?.LifeState != LifeState.Alive;
+    protected virtual bool CanTarget(Entity? target)
+    {
+        return target != null && target.LifeState == LifeState.Alive && target.Tags.Has("player") && Position.Distance(target.Position) <= MaxRange;
+    }
+
+    protected virtual bool ShouldUpdateTarget => LastTargetUpdate > TargetInterval || !CanTarget(Target);
 
     /// <summary>
     /// Return the angle created by two vectors, given they start at the same point.
@@ -211,5 +244,20 @@ public partial class Rollermine : AnimatedEntity
         float angleA = MathF.Atan2(a.y, a.x);
         float angleB = MathF.Atan2(b.y, b.x);
         return angleA - angleB;
+    }
+
+    protected override void OnPhysicsCollision(CollisionEventData eventData)
+    {
+        base.OnPhysicsCollision(eventData);
+        if (IsStunned) return;
+
+        var ent = eventData.Other.Entity;
+        if (!CanTarget(ent)) return;
+
+        ent.TakeDamage(DamageInfo.Generic(DamageAmount).WithAttacker(this));
+
+        Vector3 knockback = eventData.Normal.WithZ(1) * SelfKnockbackForce;
+        PhysicsBody.ApplyImpulse(knockback);
+        Stun(AttackStunDuration);
     }
 }
