@@ -20,6 +20,10 @@
     "PhysicsMaxs": "1,1,1",
     "RenderMins": "-1,-1,-1",
     "RenderMaxs": "-1,-1,-1",
-    "ParentPackage": ""
+    "ParentPackage": "",
+    "Summary": "A re-implementation of the rollermine from Half-Life 2",
+    "Description": "The math behind the movement was way too complicated.\n\nThe model was created from scratch in Blender and textured in Substance painter.",
+    "Public": true,
+    "ReplaceTags": "halflife halflife2 rollermine"
   }
 }
