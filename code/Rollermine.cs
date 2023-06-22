@@ -22,7 +22,7 @@ public partial class Rollermine : AnimatedEntity
     /// The base amount of torque to apply when moving the rollermine.
     /// </summary>
     [Property(Title = "Base Force")]
-    public float BaseForce { get; set; } = 9000000;
+    public float BaseForce { get; set; } = 10000000;
 
     /// <summary>
     /// The amount of torque to use while correcting for horizontal velocity.
@@ -56,11 +56,11 @@ public partial class Rollermine : AnimatedEntity
 
     public float TargetInterval { get; set; } = 5;
 
-    public static readonly float PATH_UPDATE_INTERVAL = .5f;
+    public static readonly float PATH_UPDATE_INTERVAL = 1f;
     public static readonly int PATH_ERROR_ALLOWANCE = 64;
     protected TimeSince TimeSinceGeneratedPath = 0;
     protected int CurrentPathSegment;
-    protected Vector3[]? Path;
+    protected NavPath? Path;
 
     public override void Spawn()
     {
@@ -96,40 +96,53 @@ public partial class Rollermine : AnimatedEntity
 
         if (Path == null)
         {
-            throw new InvalidOperationException("GeneratePath created null path");
+            return;
         }
 
-        if (Path.Length <= 0) return;
+        if (Path.Count <= 0) return;
 
-        var targetLocation = Path[CurrentPathSegment];
-
-        if (Position.Distance(targetLocation) >= PATH_ERROR_ALLOWANCE)
+        Vector3 targetLocation = target.Position;
+        if (CurrentPathSegment < Path.Count)
         {
-            CurrentPathSegment++;
-            if (CurrentPathSegment >= Path.Length)
+            var pathSegment = Path.Segments[CurrentPathSegment];
+            targetLocation = pathSegment.Position;
+
+            if (Position.Distance(targetLocation) <= PATH_ERROR_ALLOWANCE)
             {
-                targetLocation = target.Position;
-            } else
-            {
-                targetLocation = Path[CurrentPathSegment];
+                CurrentPathSegment++;
             }
         }
+
+
+        //var targetSegment = Path.Segments[CurrentPathSegment];
+
+        //if (Position.Distance(targetSegment.Position) <= PATH_ERROR_ALLOWANCE)
+        //{
+        //    CurrentPathSegment++;
+        //}
+
+        //Vector3 targetLocation;
+
+        //if (CurrentPathSegment >= Path.Count)
+        //{
+        //    targetLocation = target.Position;
+        //}
+        //else
+        //{
+        //    targetLocation = Path.Segments[CurrentPathSegment].Position;
+        //}
 
         MoveTowards(targetLocation);
     }
 
     protected void GeneratePath(Entity target)
     {
-
         Path = NavMesh.PathBuilder(Position)
             .WithMaxClimbDistance(4)
             .WithStepHeight(4)
             .WithMaxDistance(MaxRange * 2)
             .WithPartialPaths()
-            .Build(target.Position)
-            .Segments
-            .Select(x => x.Position)
-            .ToArray();
+            .Build(target.Position);
 
         CurrentPathSegment = 0;
         TimeSinceGeneratedPath = 0;
