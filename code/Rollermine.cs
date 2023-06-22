@@ -228,7 +228,11 @@ public partial class Rollermine : AnimatedEntity
 
     protected virtual bool CanTarget(Entity? target)
     {
-        return target != null && target.LifeState == LifeState.Alive && target.Tags.Has("player") && Position.Distance(target.Position) <= MaxRange;
+        return target != null 
+            && target.IsValid
+            && target.LifeState == LifeState.Alive 
+            && target.Tags.Has("player") 
+            && Position.Distance(target.Position) <= MaxRange;
     }
 
     protected virtual bool ShouldUpdateTarget => LastTargetUpdate > TargetInterval || !CanTarget(Target);
