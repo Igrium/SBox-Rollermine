@@ -17,7 +17,7 @@ public partial class Rollermine
     /// <summary>
     /// The epsilon to determine when the sound should be turned off.
     /// </summary>
-    protected static readonly float SOUND_FACTOR_EPSILON = .2f;
+    protected static readonly float SOUND_FACTOR_EPSILON = .1f;
 
     protected static readonly float SOUND_UPPER_LIMIT = 1.23f;
 
@@ -36,7 +36,6 @@ public partial class Rollermine
             StartSound();
             float soundFactor = GetSoundFactor();
             //CurrentSound?.SetPitch(soundFactor);
-            Log.Info(soundFactor);
             CurrentSound?.SetVolume(soundFactor);
         }
     }
