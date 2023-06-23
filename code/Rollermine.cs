@@ -106,9 +106,11 @@ public partial class Rollermine : AnimatedEntity
     /// <summary>
     /// The time at which the rollermine will be revived if stunned.
     /// </summary>
-    protected float ReviveTime;
+    protected TimeUntil? ReviveTime;
 
-    public bool IsStunned { get => Time.Now <= ReviveTime; private set { } }
+    //public bool isstunned { get => time.now <= revivetime; private set { } }
+    [Net]
+    public bool IsStunned { get; set; }
 
     /// <summary>
     /// Stun this rollermine
@@ -117,7 +119,11 @@ public partial class Rollermine : AnimatedEntity
     [Input]
     public void Stun(float time)
     {
-        ReviveTime = Time.Now + time;
+        IsStunned = true;
+        if (time > 0)
+        {
+            ReviveTime = time;
+        }
     }
 
     /// <summary>
@@ -126,12 +132,18 @@ public partial class Rollermine : AnimatedEntity
     [Input]
     public void Revive()
     {
-        ReviveTime = 0;
+        IsStunned = false;
+        ReviveTime = null;
     }
 
     [GameEvent.Tick.Server]
     public virtual void TickAI()
     {
+        if (ReviveTime.HasValue && ReviveTime.Value)
+        {
+            Revive();
+        }
+
         if (IsStunned)
         {
             SpikesOpen = false;
