@@ -1,0 +1,24 @@
+{
+  "publish": {
+    "Enabled": false,
+    "ProjectConfig": {
+      "Title": "rmine_explode_shock1",
+      "Type": "sound",
+      "Org": "local",
+      "Ident": "rmine_explode_shock1",
+      "Tags": null,
+      "Schema": 0,
+      "HasAssets": false,
+      "AssetsPath": null,
+      "Resources": null,
+      "MenuResources": null,
+      "HasCode": false,
+      "CodePath": null,
+      "PackageReferences": null,
+      "EditorReferences": null,
+      "Metadata": {
+        "SingleAssetSource": "sound/rollermine/rmine_explode_shock1.sound"
+      }
+    }
+  }
+}

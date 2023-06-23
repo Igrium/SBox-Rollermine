@@ -1,0 +1,12 @@
+{
+  "UI": false,
+  "Volume": "1.00,1.00,0",
+  "Pitch": "0.79,1.23,1",
+  "Decibels": 95,
+  "SelectionMode": "Random",
+  "Sounds": [
+    "sounds/rmine_explode_shock1.vsnd"
+  ],
+  "MaximumDistance": 2080,
+  "MinimumDistance": 104
+}

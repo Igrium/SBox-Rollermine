@@ -54,7 +54,26 @@ public partial class Rollermine : AnimatedEntity
     public bool SpikesOpen
     {
         get => GetAnimParameterBool("b_open");
-        set => SetAnimParameter("b_open", value);
+        set => SetSpikesOpen(value);
+    }
+
+    private bool _spikesWereOpen = false;
+
+    protected void SetSpikesOpen(bool value)
+    {
+        SetAnimParameter("b_open", value);
+        if (_spikesWereOpen == value) return;
+        
+        if (value)
+        {
+            Sound.FromEntity("rmine_blades_out", this);
+            Sound.FromEntity("rmine_seek_loop2", this);
+        } else
+        {
+            Sound.FromEntity("rmine_blades_in", this);
+        }
+
+        _spikesWereOpen = value;
     }
 
     public Entity? Target
@@ -261,6 +280,7 @@ public partial class Rollermine : AnimatedEntity
         if (CanTarget(ent))
         {
             ent.TakeDamage(DamageInfo.Generic(DamageAmount).WithAttacker(this));
+            Sound.FromWorld("rmine_explode_shock1", this.Position);
 
             Vector3 knockback = eventData.Normal.WithZ(1) * SelfKnockbackForce;
             PhysicsBody.ApplyImpulse(knockback);
