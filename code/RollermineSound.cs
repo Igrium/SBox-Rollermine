@@ -25,7 +25,6 @@ public partial class Rollermine
     protected virtual void TickSound()
     {
         float factor = GetSoundFactor();
-        DebugOverlay.ScreenText($"vel: {factor}");
 
         if (factor < SOUND_FACTOR_EPSILON || IsStunned)
         {
