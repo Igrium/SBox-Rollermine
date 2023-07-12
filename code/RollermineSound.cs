@@ -12,7 +12,7 @@ public partial class Rollermine
     /// <summary>
     /// What DO you call a factor used to determine a factor?
     /// </summary>
-    protected static readonly float SOUND_FACTOR_FACTOR = .005f;
+    protected static readonly float SOUND_FACTOR_FACTOR = .06f;
 
     /// <summary>
     /// The epsilon to determine when the sound should be turned off.
@@ -21,10 +21,11 @@ public partial class Rollermine
 
     protected static readonly float SOUND_UPPER_LIMIT = 1.23f;
 
-    [GameEvent.Tick.Client]
+    [GameEvent.Tick.Server]
     protected virtual void TickSound()
     {
         float factor = GetSoundFactor();
+        DebugOverlay.ScreenText($"vel: {factor}");
 
         if (factor < SOUND_FACTOR_EPSILON || IsStunned)
         {
@@ -55,6 +56,6 @@ public partial class Rollermine
 
     private float GetSoundFactor()
     {
-        return Math.Min((LocalVelocity.Length + 1) * SOUND_FACTOR_FACTOR, SOUND_UPPER_LIMIT);
+        return Math.Min((AngularVelocity.AsVector3().Length + 1) * SOUND_FACTOR_FACTOR, SOUND_UPPER_LIMIT);
     }
 }

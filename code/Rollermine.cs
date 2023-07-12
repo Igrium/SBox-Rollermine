@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using TargetLib;
 
 namespace Rollermine;
 
@@ -44,6 +45,9 @@ public partial class Rollermine : AnimatedEntity
     public static readonly float MAX_TORQUE_FACTOR = 5;
 
     public float SelfKnockbackForce { get; set; } = 80000;
+
+    // Dummy component to satisfy the compiler
+    public TargetingComponent Targeting { get; private set; } = new TargetingComponent();
 
     /// <summary>
     /// The amount of time to stun ourselves after an attack.
@@ -101,6 +105,12 @@ public partial class Rollermine : AnimatedEntity
 
         PhysicsEnabled = true;
         UsePhysicsCollision = true;
+
+        Tags.Add(TargetingTags.PLAYER_ENEMY);
+        Tags.Add("solid");
+
+        Targeting = Components.Create<TargetingComponent>();
+        Targeting.SetupRelationships();
     }
 
     /// <summary>
@@ -259,10 +269,10 @@ public partial class Rollermine : AnimatedEntity
 
     protected virtual bool CanTarget(Entity? target)
     {
-        return target != null 
+        return target != null
             && target.IsValid
-            && target.LifeState == LifeState.Alive 
-            && target.Tags.Has("player") 
+            && target.LifeState == LifeState.Alive
+            && Targeting.ShouldAttack(target)
             && Position.Distance(target.Position) <= MaxRange;
     }
 

@@ -1,0 +1,28 @@
+{
+  "publish": {
+    "Enabled": true,
+    "ProjectConfig": {
+      "Title": "HD Rollermine",
+      "Type": "model",
+      "Org": "igrium",
+      "Ident": "rollermine-model",
+      "Tags": null,
+      "Schema": 0,
+      "HasAssets": false,
+      "AssetsPath": null,
+      "Resources": null,
+      "MenuResources": null,
+      "HasCode": false,
+      "CodePath": null,
+      "PackageReferences": null,
+      "EditorReferences": null,
+      "Metadata": {
+        "SingleAssetSource": "models/rollermine.vmdl",
+        "Summary": "An HD rollermine model I made for my rollermine addon",
+        "Description": "The entity itself can be found at https://asset.party/igrium/rollermine",
+        "Public": true,
+        "ReplaceTags": "hl2 halflife2 halflife"
+      }
+    }
+  }
+}
